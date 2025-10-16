@@ -1,0 +1,220 @@
+---
+
+
+- name: Check NVIDIA JetPack systems
+  block:
+    - name: Check if NVIDIA JetPack system
+      ansible.builtin.stat:
+        path: /etc/nv_tegra_release
+      register: t_ollama_nv_tegra_file
+      changed_when: false
+
+    - name: Process JetPack version
+      block:
+        - name: Download and extract JetPack 6 components
+          block:
+
+            - name: Check if JetPack 6 library files exist
+              ansible.builtin.find:
+                paths: "{{ ollama_install_lib_dir }}/cuda_jetpack6"
+                patterns: "*.so*"
+                use_regex: no
+              register: t_ollama_jetpack6_libs
+
+            - block:
+
+                - name: Download JetPack 6
+                  ansible.builtin.get_url:
+                    url: "{{ ollama_github_download_jetpack6_url }}"
+                    dest: "{{ tmp_dir }}/ollama-jetpack6.tgz"
+
+                - name: Extract JetPack 6
+                  ansible.builtin.unarchive:
+                    src: "{{ tmp_dir }}/ollama-jetpack6.tgz"
+                    dest: "{{ ollama_install_dir }}"
+                    remote_src: yes
+                    owner: 0
+                    group: 0
+                    mode: '0755'
+
+              when: t_ollama_jetpack6_libs.files | length < 1
+
+          when: "'R36' in t_ollama_nv_tegra_file.content | default('')"
+
+        - name: Download and extract JetPack 5 components
+          block:
+
+            - name: Check if ROCm library files exist
+              ansible.builtin.find:
+                paths: "{{ ollama_install_lib_dir }}/cuda_jetpack5"
+                patterns: "*.so*"
+                use_regex: no
+              register: t_ollama_jetpack5_libs
+
+            - block:
+
+                - name: Download JetPack 5
+                  ansible.builtin.get_url:
+                    url: "{{ ollama_github_download_jetpack5_url }}"
+                    dest: "{{ tmp_dir }}/ollama-jetpack5.tgz"
+
+                - name: Extract JetPack 5
+                  ansible.builtin.unarchive:
+                    src: "{{ tmp_dir }}/ollama-jetpack5.tgz"
+                    dest: "{{ ollama_install_dir }}"
+                    remote_src: yes
+                    owner: 0
+                    group: 0
+                    mode: '0755'
+
+              when: t_ollama_jetpack5_libs.files | length < 1
+
+          when: "'R35' in t_ollama_nv_tegra_file.content | default('')"
+
+        - name: Warn about unsupported JetPack version
+          ansible.builtin.debug:
+            msg: "Unsupported JetPack version detected. GPU may not be supported"
+          when:
+            - "'R36' not in t_ollama_nv_tegra_file.content | default('')"
+            - "'R35' not in t_ollama_nv_tegra_file.content | default('')"
+
+      when: t_ollama_nv_tegra_file.stat.exists
+
+  rescue:
+    - name: Clean up on failure
+      ansible.builtin.file:
+        path: "{{ tmp_dir }}/ollama-jetpack{{ item }}.tgz"
+        state: absent
+      loop: ["5", "6"]
+      ignore_errors: yes
+
+
+
+
+- name: Check for NVIDIA GPU
+  ansible.builtin.shell:
+    cmd: lspci -d '10de:' | grep -q 'NVIDIA'
+  register: t_ollama_nvidia_gpu_lspci
+  changed_when: false
+  ignore_errors: yes
+
+- name: Download and install nvidia cuda
+  block:
+
+    - block:
+
+        - name: Download keyring
+          ansible.builtin.get_url:
+            url: "{{ ollama_nvidia_repository_deb_pkg_url }}"
+            dest: /tmp/cuda-keyring.deb
+
+        - name: Install repository
+          ansible.builtin.apt:
+            deb: /tmp/cuda-keyring.deb
+
+        - name: Cleanup
+          ansible.builtin.file:
+            path: /tmp/cuda-keyring.deb
+            state: absent
+
+      when: ansible_pkg_mgr == 'apt'
+
+
+    - block:
+
+        - name: Add NVIDIA Cuda yum repository
+          ansible.builtin.yum_repository:
+            name: "nvidia cuda"
+            baseurl: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ollama_nvidia_os_label[ansible_distribution | lower] }}{{ ansible_distribution_major_version }}/{{ ollama_nvidia_arch[ansible_machine] }}/cuda-{{ ollama_nvidia_os_label[ansible_distribution | lower] }}{{ ansible_distribution_major_version }}.repo"
+            gpgcheck: no
+            enabled: yes
+
+        - name: install nvidia drivers
+          ansible.builtin.package:
+            name: nvidia-driver-latest-dkms
+            state: present
+
+      when: ansible_pkg_mgr in ['yum', 'dnf']
+
+
+    - name: install Cuda
+      ansible.builtin.package:
+        name: cuda-drivers
+        state: present
+
+    - name: install kernel-headers
+      ansible.builtin.package:
+        name:
+          - kernel-devel
+          - kernel-headers
+        state: present
+      when: (ansible_machine | lower) in ['rocky', 'centos', 'rhel', 'amzn', 'fedora']
+
+    - name: install kernel-headers
+      ansible.builtin.package:
+        name:
+          - kernel-headers
+        state: present
+      when: (ansible_machine | lower) in ['debian', 'ubuntu']
+
+
+    - name: Check if NVIDIA modules are loaded
+      shell: lsmod | grep -q nvidia && lsmod | grep -q nvidia_uvm
+      register: t_ollama_nvidia_modules_loaded
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Get NVIDIA CUDA version from DKMS
+      shell: "dkms status | awk -F: '/added/ { print $1 }'"
+      register: t_ollama_nvidia_cuda_version
+      changed_when: false
+      when: not t_ollama_nvidia_modules_loaded.rc == 0
+
+    - name: Install NVIDIA CUDA via DKMS
+      shell: "dkms install {{ nvidia_cuda_version.stdout }}"
+      when:
+        - not t_ollama_nvidia_modules_loaded.rc == 0
+        - t_ollama_nvidia_cuda_version.stdout != ""
+
+    - name: Load nvidia module
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ ollama_nvidia_kernel_modules }}"
+
+
+    - name: Check if nvidia-persistenced is available
+      command: which nvidia-persistenced
+      register: t_ollama_nvidia_persistenced_bin
+      changed_when: no
+      ignore_errors: yes
+
+    - block:
+
+        - name: Create NVIDIA modules config directory
+          file:
+            path: "{{ system_modules_load_d }}"
+            state: directory
+            owner: 0
+            group: 0
+            mode: '0755'
+
+        - name: Configure NVIDIA modules to load on boot
+          blockinfile:
+            path: /etc/modules-load.d/nvidia.conf
+            block: |
+              nvidia
+              nvidia_uvm
+            create: yes
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - NVIDIA MODULES"
+
+        - name: Ensure nvidia-persistenced service is running
+          systemd:
+            name: nvidia-persistenced
+            state: started
+            enabled: yes
+
+      when: t_ollama_nvidia_persistenced_bin.rc == 0
+
+
+  when: t_ollama_nvidia_gpu_lspci.rc == 0

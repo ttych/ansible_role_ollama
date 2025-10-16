@@ -1,0 +1,47 @@
+---
+
+- name: Check for AMD GPU
+  ansible.builtin.shell:
+    cmd: lspci -d '1002:' | grep -q 'AMD'
+  register: t_ollama_amd_gpu_lspci
+  changed_when: false
+  ignore_errors: yes
+
+- name: Download and install AMD ROCm bundle
+  block:
+
+    - name: Check if ROCm library files exist
+      ansible.builtin.find:
+        paths: "{{ ollama_install_rocm_dir }}"
+        patterns: "libdrm_amdgpu.so*"
+        use_regex: no
+      register: t_ollama_rocm_libs
+
+    - name: Debug found files
+      ansible.builtin.debug:
+        msg: "Found {{ t_ollama_rocm_libs.files | length }} ROCm library files"
+
+    - block:
+
+        - name: Download Linux ROCm bundle
+          ansible.builtin.get_url:
+            url: "{{ ollama_github_download_rocm_url }}"
+            dest: "{{ tmphuge_dir }}/ollama-rocm.tgz"
+
+        - name: Extract ROCm components
+          ansible.builtin.unarchive:
+            src: "{{ tmphuge_dir }}/ollama-rocm.tgz"
+            dest: "{{ ollama_install_dir }}"
+            remote_src: yes
+            owner: 0
+            group: 0
+            mode: '0755'
+
+        - name: Clean up temporary file
+          ansible.builtin.file:
+            path: "{{ tmphuge_dir }}/ollama-rocm.tgz"
+            state: absent
+
+      when: t_ollama_rocm_libs.files | length < 1
+
+  when: t_ollama_amd_gpu_lspci.rc == 0

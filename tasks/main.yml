@@ -1,0 +1,14 @@
+---
+
+- block:
+    - include_tasks: context.yml
+
+    - include_tasks: ollama.yml
+
+  when:
+    - want_ollama
+    - ansible_system == 'Linux'
+
+- name: set has_ollama
+  set_fact:
+    has_ollama: "{{ want_ollama and ansible_system == 'Linux' }}"

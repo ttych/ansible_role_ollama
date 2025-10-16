@@ -1,0 +1,43 @@
+---
+
+want_ollama: yes
+want_ollama_service: no
+# want_ollama_service: "{{ want_ollama }}"
+
+# ollama_version:
+
+ollama_github_repo: ollama/ollama
+ollama_github_api_url: "https://api.github.com/repos/{{ ollama_github_repo }}/releases/latest"
+ollama_github_download_url: "https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/"
+ollama_github_download_ollama_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}.tgz"
+ollama_github_download_jetpack5_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-jetpack5.tgz"
+ollama_github_download_jetpack6_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-jetpack6.tgz"
+ollama_github_download_rocm_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-rocm.tgz"
+
+ollama_install_dir: "{{ system_local_dir }}"
+ollama_install_lib_dir: "{{ ollama_install_dir }}/lib/ollama"
+ollama_install_bin_dir: "{{ ollama_install_dir }}/bin"
+ollama_install_bin: "{{ ollama_install_bin_dir }}/ollama"
+ollama_install_rocm_dir: "{{ ollama_install_lib_dir }}/rocm"
+
+ollama_service_name: ollama
+ollama_user: ollama
+ollama_group: ollama
+
+ollama_nvidia_arch:
+  aarch64: sbsa
+  x86_64: x86_64
+ollama_nvidia_os_label:
+  ubuntu: ubuntu
+  debian: debian
+  amzn: fedora
+  fedora: fedora
+  rocky: rhel
+  centos: rhel
+  rhel: rhel
+
+ollama_nvidia_repository_deb_pkg_url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ollama_nvidia_os_label[ansible_distribution | lower] }}{{ ansible_distribution_major_version }}/{{ ollama_nvidia_arch[ansible_machine] }}/cuda-keyring_1.1-1_all.deb"
+
+ollama_nvidia_kernel_modules:
+  - nvidia
+  - nvidia_uvm

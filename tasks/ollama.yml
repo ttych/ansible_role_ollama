@@ -1,0 +1,9 @@
+---
+
+- include_tasks: ollama_distribution.yml
+
+- include_tasks: ollama_nvidia.yml
+
+- include_tasks: ollama_amd.yml
+
+- include_tasks: ollama_service.yml

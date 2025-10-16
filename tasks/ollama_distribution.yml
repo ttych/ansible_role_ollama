@@ -1,0 +1,76 @@
+---
+
+- name: check current ollama bin
+  ansible.builtin.stat:
+    path: "{{ ollama_install_bin }}"
+  register: t_ollama_install_bin
+
+- block:
+
+    - name: get latest ollama version from GitHub API
+      ansible.builtin.uri:
+        url: "{{ ollama_github_api_url }}"
+        return_content: yes
+      register: t_ollama_github_latest_release
+      changed_when: no
+
+    - name: extract latest ollama version
+      ansible.builtin.set_fact:
+        ollama_version: "{{ (t_ollama_github_latest_release.content | from_json).tag_name | replace('v', '') }}"
+
+  when: ollama_version is not defined or ollama_version == ""
+
+- block:
+
+    - name: get current ollama version
+      ansible.builtin.shell:
+        cmd: "{{ ollama_install_bin }} --version | sed -n 's/.* \\([0-9]\\+\\.[0-9]\\+\\.[0-9]\\+\\)$/\\1/p'"
+      register: t_ollama_current_version
+      changed_when: no
+
+  when: t_ollama_install_bin.stat.exists
+
+
+- debug:
+    msg: "expect: {{ ollama_version }}, found: {{ t_ollama_current_version.stdout |d('') }}"
+
+
+- block:
+
+    - name: clean previous install
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ ollama_install_lib_dir }}"
+        - "{{ ollama_install_bin }}"
+
+    - name: download ollama archive
+      ansible.builtin.get_url:
+        url: "{{ ollama_github_download_ollama_url }}"
+        dest: "{{ tmphuge_dir }}/ollama.tar.gz"
+        mode: '0644'
+
+    - name: ensure {{ ollama_install_dir }} directory
+      ansible.builtin.file:
+        path: "{{ ollama_install_dir }}"
+        mode: '0755'
+        owner: 0
+        group: 0
+        state: directory
+
+    - name: extract ollama archive
+      ansible.builtin.unarchive:
+        src: "{{ tmphuge_dir }}/ollama.tar.gz"
+        dest: "{{ ollama_install_dir }}"
+        remote_src: yes
+        creates: "{{ ollama_install_dir }}/bin/ollama"
+
+    - name: clean up temporary files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ tmphuge_dir }}/ollama.tar.gz"
+
+  when: not t_ollama_install_bin.stat.exists or (t_ollama_current_version is defined and t_ollama_current_version.stdout != ollama_version)

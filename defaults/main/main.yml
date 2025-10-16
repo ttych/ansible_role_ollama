@@ -1,0 +1,14 @@
+---
+
+architecture_alt:
+  x86_64: amd64
+  aarch64: arm64
+  arm64: arm64
+
+tmp_dir: /tmp
+tmphuge_dir: /var/tmp
+
+system_local_dir: /usr/local
+systemd_system_dir: /etc/systemd/system/
+
+system_modules_load_d: /etc/modules-load.d

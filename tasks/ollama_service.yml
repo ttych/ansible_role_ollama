@@ -1,0 +1,76 @@
+---
+
+- block:
+
+    - name: create ollama user
+      ansible.builtin.user:
+        name: "{{ ollama_user }}"
+        system: yes
+        shell: /bin/false
+        home: "/usr/share/{{ ollama_user }}"
+        group: "{{ ollama_group }}"
+        create_home: yes
+        state: present
+
+    - name: check if render group exists
+      ansible.builtin.getent:
+        database: group
+        key: render
+      register: render_group_exists
+      ignore_errors: yes
+      changed_when: no
+
+    - name: add ollama user to render group
+      ansible.builtin.user:
+        name: "{{ ollama_user }}"
+        groups: render
+        append: yes
+      when: not render_group_exists.failed
+
+    - name: check if video group exists
+      ansible.builtin.getent:
+        database: group
+        key: video
+      register: video_group_exists
+      ignore_errors: yes
+      changed_when: no
+
+    - name: add ollama user to video group
+      ansible.builtin.user:
+        name: "{{ ollama_user }}"
+        groups: video
+        append: yes
+      when: not video_group_exists.failed
+
+
+    - block:
+
+        - name: deploy ollama systemd service
+          ansible.builtin.template:
+            src: systemd/ollama.service
+            dest: "{{ systemd_system_dir }}/{{ ollama_service_name }}.service"
+            mode: '0644'
+            owner: 0
+            group: 0
+          register: t_ollama_service_deploy
+
+        - name: enable and start ollama service
+          ansible.builtin.systemd:
+            name: ollama
+            enabled: yes
+            state: started
+            daemon_reload: yes
+          register: t_ollama_service_start
+
+        - name: restart ollama service
+          ansible.builtin.systemd:
+            name: ollama
+            enabled: yes
+            state: restarted
+            daemon_reload: yes
+          when: not t_ollama_service_start.changed and t_ollama_service_deploy.changed
+
+      when: ansible_service_mgr == 'systemd'
+
+
+  when: want_ollama_service
