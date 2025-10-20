@@ -12,4 +12,3 @@ Environment="PATH={{ ollama_install_bin_dir }}:/usr/local/bin:/usr/local/sbin:/u
 
 [Install]
 WantedBy=default.target
-EOF
