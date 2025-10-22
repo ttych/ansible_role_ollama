@@ -1,8 +1,7 @@
 ---
 
 want_ollama: yes
-want_ollama_service: no
-# want_ollama_service: "{{ want_ollama }}"
+want_ollama_service: "{{ want_ollama }}"
 
 # ollama_version:
 
@@ -23,6 +22,19 @@ ollama_install_rocm_dir: "{{ ollama_install_lib_dir }}/rocm"
 ollama_service_name: ollama
 ollama_user: ollama
 ollama_group: ollama
+ollama_user_shell: /bin/false
+
+ollama_home_base_locations:
+  - /app
+  - /home
+ollama_home_zfs_properties:
+  setuid: off
+  compression: "lz4"
+  sharenfs: off
+  sharesmb: off
+  atime: off
+  relatime: off
+ollama_home_mode: "0700"
 
 ollama_nvidia_arch:
   aarch64: sbsa

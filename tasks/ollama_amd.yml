@@ -17,9 +17,9 @@
         use_regex: no
       register: t_ollama_rocm_libs
 
-    - name: Debug found files
-      ansible.builtin.debug:
-        msg: "Found {{ t_ollama_rocm_libs.files | length }} ROCm library files"
+    # - name: Debug found files
+    #   ansible.builtin.debug:
+    #     msg: "Found {{ t_ollama_rocm_libs.files | length }} ROCm library files"
 
     - block:
 

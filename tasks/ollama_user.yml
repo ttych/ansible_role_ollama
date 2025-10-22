@@ -1,0 +1,101 @@
+---
+
+- block:
+
+    - name: check home base locations
+      stat:
+        path: "{{ item }}"
+      loop: "{{ ollama_home_base_locations }}"
+      register: t_ollama_user_home_base_check
+      ignore_errors: yes
+
+    - name: select home_base
+      set_fact:
+        ollama_home_base: "{{ item.item }}"
+        ollama_home: "{{ item.item }}/{{ ollama_user }}"
+      loop: "{{ t_ollama_user_home_base_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when:
+        - (ollama_home_base|d('')) == ''
+        - item.stat is defined
+        - item.stat.exists
+        - item.stat.isdir
+
+  when: ollama_home is not defined or ollama_home == ''
+
+- name: define
+  set_fact:
+    ollama_home_base: "{{ ollama_home | dirname }}"
+  when: ollama_home_base is not defined or ollama_home_base == ''
+
+- name: display ollama_home_base
+  debug:
+    msg: "Home base: {{ ollama_home_base }}  ;  Home: {{ ollama_home }}"
+
+
+- block:
+
+    - name: get ollama_home_base dataset
+      shell: zfs list -H "{{ ollama_home_base }}" | awk '$5 == "{{ ollama_home_base }}" {print $1}'
+      register: t_ollama_home_base_dataset
+      changed_when: no
+
+    - name: create dataset for ollama_home
+      zfs:
+        name: "{{ t_ollama_home_base_dataset.stdout }}/{{ ollama_home | basename }}"
+        state: present
+        extra_zfs_properties: "{{ ollama_home_zfs_properties }}"
+      when:
+        - t_ollama_home_base_dataset.rc == 0
+        - t_ollama_home_base_dataset.stdout != ""
+
+
+- name: create ollama user
+  ansible.builtin.user:
+    name: "{{ ollama_user }}"
+    system: yes
+    shell: "{{ ollama_user_shell }}"
+    home: "{{ ollama_home }}"
+    group: "{{ ollama_group }}"
+    create_home: yes
+    state: present
+
+- name: home permission
+  file:
+    path: "{{ ollama_home }}"
+    owner: "{{ ollama_user }}"
+    group: "{{ ollama_group }}"
+    mode: "{{ ollama_home_mode }}"
+    state: directory
+
+- name: check if render group exists
+  ansible.builtin.getent:
+    database: group
+    key: render
+  register: render_group_exists
+  ignore_errors: yes
+  changed_when: no
+
+- name: add ollama user to render group
+  ansible.builtin.user:
+    name: "{{ ollama_user }}"
+    groups: render
+    append: yes
+  when: not render_group_exists.failed
+
+- name: check if video group exists
+  ansible.builtin.getent:
+    database: group
+    key: video
+  register: video_group_exists
+  ignore_errors: yes
+  changed_when: no
+
+- name: add ollama user to video group
+  ansible.builtin.user:
+    name: "{{ ollama_user }}"
+    groups: video
+    append: yes
+  when: not video_group_exists.failed
+

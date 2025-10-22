@@ -65,6 +65,7 @@
         dest: "{{ ollama_install_dir }}"
         remote_src: yes
         creates: "{{ ollama_install_dir }}/bin/ollama"
+      register: t_ollama_install
 
     - name: clean up temporary files
       ansible.builtin.file:
