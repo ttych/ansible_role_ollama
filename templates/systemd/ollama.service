@@ -9,7 +9,8 @@ Group={{ ollama_group }}
 Restart=always
 RestartSec=3
 Environment="PATH={{ ollama_install_bin_dir }}:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
-Environment="OLLAMA_HOST={{ ollama_service_host }}"
+Environment="OLLAMA_HOST={{ ollama_host }}"
+Environment="OLLAMA_MODELS={{ ollama_models }}"
 
 [Install]
 WantedBy=default.target

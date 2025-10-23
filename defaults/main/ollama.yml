@@ -54,4 +54,6 @@ ollama_nvidia_kernel_modules:
   - nvidia
   - nvidia_uvm
 
-ollama_service_host: 127.0.0.1
+ollama_host: 127.0.0.1
+
+ollama_models: "{{ ollama_home }}/models"
