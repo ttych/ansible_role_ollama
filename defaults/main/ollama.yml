@@ -53,3 +53,5 @@ ollama_nvidia_repository_deb_pkg_url: "https://developer.download.nvidia.com/com
 ollama_nvidia_kernel_modules:
   - nvidia
   - nvidia_uvm
+
+ollama_service_host: 127.0.0.1
