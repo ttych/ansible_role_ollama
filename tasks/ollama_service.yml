@@ -31,7 +31,7 @@
             daemon_reload: yes
           when: not t_ollama_service_start.changed and (t_ollama_service_deploy.changed or t_ollama_install.changed)
 
-      when: ansible_service_mgr == 'systemd'
+      when: ansible_facts.service_mgr == 'systemd'
 
 
   when: want_ollama_service

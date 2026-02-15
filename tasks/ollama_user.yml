@@ -50,6 +50,11 @@
         - t_ollama_home_base_dataset.rc == 0
         - t_ollama_home_base_dataset.stdout != ""
 
+- name: create ollama group
+  ansible.builtin.group:
+    name: "{{ ollama_user }}"
+    system: yes
+    state: present
 
 - name: create ollama user
   ansible.builtin.user:

@@ -7,8 +7,8 @@
 
   when:
     - want_ollama
-    - ansible_system == 'Linux'
+    - ansible_facts.system == 'Linux'
 
 - name: set has_ollama
   set_fact:
-    has_ollama: "{{ want_ollama and ansible_system == 'Linux' }}"
+    has_ollama: "{{ want_ollama and ansible_facts.system == 'Linux' }}"

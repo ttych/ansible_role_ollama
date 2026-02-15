@@ -8,10 +8,10 @@ want_ollama_service: "{{ want_ollama }}"
 ollama_github_repo: ollama/ollama
 ollama_github_api_url: "https://api.github.com/repos/{{ ollama_github_repo }}/releases/latest"
 ollama_github_download_url: "https://github.com/ollama/ollama/releases/download/v{{ ollama_version }}/"
-ollama_github_download_ollama_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}.tgz"
-ollama_github_download_jetpack5_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-jetpack5.tgz"
-ollama_github_download_jetpack6_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-jetpack6.tgz"
-ollama_github_download_rocm_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_system | lower }}-{{ architecture_alt[ansible_architecture] }}-rocm.tgz"
+ollama_github_download_ollama_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_facts.system | lower }}-{{ architecture_alt[ansible_facts.architecture] }}.tar.zst"
+ollama_github_download_jetpack5_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_facts.system | lower }}-{{ architecture_alt[ansible_facts.architecture] }}-jetpack5.tar.zst"
+ollama_github_download_jetpack6_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_facts.system | lower }}-{{ architecture_alt[ansible_facts.architecture] }}-jetpack6.tar.zst"
+ollama_github_download_rocm_url: "{{ ollama_github_download_url }}/ollama-{{ ansible_facts.system | lower }}-{{ architecture_alt[ansible_facts.architecture] }}-rocm.tar.zst"
 
 ollama_install_dir: "{{ system_local_dir }}"
 ollama_install_lib_dir: "{{ ollama_install_dir }}/lib/ollama"
@@ -48,7 +48,7 @@ ollama_nvidia_os_label:
   centos: rhel
   rhel: rhel
 
-ollama_nvidia_repository_deb_pkg_url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ollama_nvidia_os_label[ansible_distribution | lower] }}{{ ansible_distribution_major_version }}/{{ ollama_nvidia_arch[ansible_machine] }}/cuda-keyring_1.1-1_all.deb"
+ollama_nvidia_repository_deb_pkg_url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ ollama_nvidia_os_label[ansible_facts.distribution | lower] }}{{ ansible_facts.distribution_major_version }}/{{ ollama_nvidia_arch[ansible_facts.machine] }}/cuda-keyring_1.1-1_all.deb"
 
 ollama_nvidia_kernel_modules:
   - nvidia
