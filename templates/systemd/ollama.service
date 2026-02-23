@@ -6,11 +6,22 @@ After=network-online.target
 ExecStart={{ ollama_install_bin }} serve
 User={{ ollama_user }}
 Group={{ ollama_group }}
+SupplementaryGroups={{ ollama_groups | join(' ') }}
 Restart=always
 RestartSec=3
 Environment="PATH={{ ollama_install_bin_dir }}:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+Environment="LD_LIBRARY_PATH={{ ollama_install_lib_dir }}:{{ ollama_install_rocm_dir }}"
 Environment="OLLAMA_HOST={{ ollama_host }}"
 Environment="OLLAMA_MODELS={{ ollama_models }}"
+{% if ollama_amd_backend is defined %}
+{%   if ollama_amd_backend == "rocm" %}
+Environment="OLLAMA_VULKAN=0"
+Environment="HSA_OVERRIDE_GFX_VERSION={{ ollama_amd_hsa_override_gfx_version }}"
+{%   else %}
+Environment="OLLAMA_VULKAN=1"
+Environment="OLLAMA_LLM_LIBRARY=vulkan"
+{%   endif %}
+{% endif %}
 
 [Install]
 WantedBy=default.target

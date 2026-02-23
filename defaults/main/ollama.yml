@@ -23,6 +23,9 @@ ollama_service_name: ollama
 ollama_user: ollama
 ollama_group: ollama
 ollama_user_shell: /bin/false
+ollama_groups:
+  - video
+  - render
 
 ollama_home_base_locations:
   - /app
@@ -35,6 +38,10 @@ ollama_home_zfs_properties:
   atime: off
   relatime: off
 ollama_home_mode: "0700"
+
+ollama_amd_packages:
+  - vulkan-tools
+  - rocminfo
 
 ollama_nvidia_arch:
   aarch64: sbsa

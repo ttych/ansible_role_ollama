@@ -7,8 +7,56 @@
   changed_when: false
   ignore_errors: yes
 
-- name: Download and install AMD ROCm bundle
-  block:
+- name: set has_amd
+  set_fact:
+    ollama_has_amd: "{{ t_ollama_amd_gpu_lspci.rc == 0 }}"
+
+
+- block:
+
+    - name: install amd utilities
+      ansible.builtin.package:
+        name: "{{ ollama_amd_packages }}"
+        state: present
+
+    - name: fetch rocm info
+      ansible.builtin.command: rocminfo
+      changed_when: no
+      ignore_errors: yes
+      register: t_ollama_amd_rocminfo
+
+    - name: detect AMD GPU architecture
+      ansible.builtin.set_fact:
+        ollama_amd_gfx: "{{ t_ollama_amd_rocminfo.stdout | regex_search('gfx[0-9]+') }}"
+      when:
+        - ollama_amd_gfx is not defined
+        - t_ollama_amd_rocminfo.rc == 0
+        - t_ollama_amd_rocminfo.stdout is defined
+
+    - name: compute HSA override value
+      ansible.builtin.set_fact:
+        ollama_amd_hsa_override_gfx_version: >-
+          {%- if ollama_amd_gfx is defined and ollama_amd_gfx.startswith('gfx11') -%}
+          11.0.0
+          {%- elif ollama_amd_gfx is defined and ollama_amd_gfx.startswith('gfx10') -%}
+          10.3.0
+          {%- else -%}
+          ""
+          {%- endif -%}
+
+    - name: decide GPU backend
+      ansible.builtin.set_fact:
+        ollama_amd_backend: >-
+          {%- if ollama_amd_hsa_override_gfx_version is defined and ollama_amd_hsa_override_gfx_version != "" -%}
+          rocm
+          {%- else -%}
+          vulkan
+          {%- endif -%}
+
+  when: ollama_has_amd
+
+
+- block:
 
     - name: Check if ROCm library files exist
       ansible.builtin.find:
@@ -16,10 +64,6 @@
         patterns: "libdrm_amdgpu.so*"
         use_regex: no
       register: t_ollama_rocm_libs
-
-    # - name: Debug found files
-    #   ansible.builtin.debug:
-    #     msg: "Found {{ t_ollama_rocm_libs.files | length }} ROCm library files"
 
     - block:
 
@@ -44,4 +88,4 @@
 
       when: t_ollama_rocm_libs.files | length < 1
 
-  when: t_ollama_amd_gpu_lspci.rc == 0
+  when: ollama_has_amd
