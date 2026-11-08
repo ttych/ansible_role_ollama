@@ -6,7 +6,7 @@ After=network-online.target
 ExecStart={{ ollama_install_bin }} serve
 User={{ ollama_user }}
 Group={{ ollama_group }}
-SupplementaryGroups={{ ollama_groups | join(' ') }}
+SupplementaryGroups={{ ollama_user_existing_groups | join(' ') }}
 Restart=always
 RestartSec=3
 Environment="PATH={{ ollama_install_bin_dir }}:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
@@ -24,4 +24,4 @@ Environment="OLLAMA_LLM_LIBRARY=vulkan"
 {% endif %}
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

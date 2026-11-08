@@ -17,7 +17,7 @@
 
         - name: enable and start ollama service
           ansible.builtin.systemd:
-            name: ollama
+            name: "{{ ollama_service_name }}"
             enabled: yes
             state: started
             daemon_reload: yes
@@ -25,7 +25,7 @@
 
         - name: restart ollama service
           ansible.builtin.systemd:
-            name: ollama
+            name: "{{ ollama_service_name }}"
             enabled: yes
             state: restarted
             daemon_reload: yes

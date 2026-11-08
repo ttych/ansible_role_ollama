@@ -74,33 +74,22 @@
     mode: "{{ ollama_home_mode }}"
     state: directory
 
-- name: check if render group exists
+- name: check if groups exists
   ansible.builtin.getent:
     database: group
-    key: render
-  register: render_group_exists
+    key: "{{ item }}"
+  loop: "{{ ollama_user_groups }}"
   ignore_errors: yes
   changed_when: no
+  register: t_ollama_user_groups_check
 
-- name: add ollama user to render group
+- name: define existing groups
+  ansible.builtin.set_fact:
+    ollama_user_existing_groups: "{{ t_ollama_user_groups_check.results | selectattr('failed', 'equalto', false) | map(attribute='item') | list }}"
+
+- name: add groups to ollama user
   ansible.builtin.user:
     name: "{{ ollama_user }}"
-    groups: render
+    groups: "{{ ollama_user_existing_groups | join(',') }}"
     append: yes
-  when: not render_group_exists.failed
-
-- name: check if video group exists
-  ansible.builtin.getent:
-    database: group
-    key: video
-  register: video_group_exists
-  ignore_errors: yes
-  changed_when: no
-
-- name: add ollama user to video group
-  ansible.builtin.user:
-    name: "{{ ollama_user }}"
-    groups: video
-    append: yes
-  when: not video_group_exists.failed
-
+  when: ollama_user_existing_groups | length > 0

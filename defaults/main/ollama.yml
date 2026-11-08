@@ -23,7 +23,7 @@ ollama_service_name: ollama
 ollama_user: ollama
 ollama_group: ollama
 ollama_user_shell: /bin/false
-ollama_groups:
+ollama_user_groups:
   - video
   - render
 
